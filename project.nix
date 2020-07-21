@@ -10,5 +10,9 @@ mkDerivation {
     base clash-prelude containers ghc-typelits-extra
     ghc-typelits-knownnat ghc-typelits-natnormalise lens mtl
   ];
+  testHaskellDepends = [
+    base ghc-typelits-extra ghc-typelits-knownnat
+    ghc-typelits-natnormalise
+  ];
   license = stdenv.lib.licenses.bsd3;
 }
