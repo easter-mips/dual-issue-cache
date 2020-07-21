@@ -83,4 +83,10 @@ test-suite icache-test
                , ghc-typelits-natnormalise
                , ghc-typelits-extra
                , ghc-typelits-knownnat
+
+               -- Tasty + Hedgedog for testing
+               , tasty 
+               , tasty-expected-failure
+               , hedgehog
+               , tasty-hedgehog
   default-language: Haskell2010
