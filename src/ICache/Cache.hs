@@ -114,7 +114,7 @@ checkSetConflict i = (&&) <$> f Way0 <*> f Way1
 
 -- If a refilling is taking place, forbid input
 checkRefillConflict :: ICacheM Bool
-checkRefillConflict = (&&) <$> f Trans0 <*> f Trans1
+checkRefillConflict = (||) <$> f Trans0 <*> f Trans1
   where f :: TransId -> ICacheM Bool
         f tid = g . getTransState tid <$> use cacheState
         g (TransRefill _) = True
@@ -323,5 +323,5 @@ submitTrans tid addr = f >>=
   where f = getLRU (getAddrSet addr)
 
 handleTrans :: CacheState -> ICache
-handleTrans cs i = handleAxiAddrReady (i ^. arready) cs >> genAxiAddrOutput (cs ^. transInfo)
-                >> genAxiRReady (cs ^. transInfo) >> handleAxiData i cs >> genRefillOutput (cs ^. transInfo)
+handleTrans cs i = genRefillOutput (cs ^. transInfo) >> handleAxiAddrReady (i ^. arready) cs >> genAxiAddrOutput (cs ^. transInfo)
+                >> genAxiRReady (cs ^. transInfo) >> handleAxiData i cs
