@@ -20,21 +20,10 @@ prop_reverse_involutive :: Property
 prop_reverse_involutive =
   property $ do
     xs <- forAll genAlphaList
-    classify "empty" $ length xs == 0
+    classify "empty" $ null xs
     classify "small" $ length xs < 10
     classify "large" $ length xs >= 10
     test_involutive reverse xs
-
-badReverse :: [a] -> [a]
-badReverse [] = []
-badReverse [_] = []
-badReverse (x : xs) = badReverse xs ++ [x]
-
-prop_badReverse_involutive :: Property
-prop_badReverse_involutive =
-  property $ do
-    xs <- forAll genAlphaList
-    test_involutive badReverse xs
 
 main :: IO ()
 main =
@@ -43,7 +32,4 @@ main =
     [ testProperty
         "reverse involutive"
         prop_reverse_involutive
-    , expectFail $ testProperty
-        "badReverse involutive fails"
-         prop_badReverse_involutive
     ]

@@ -10,14 +10,8 @@
 {-# LANGUAGE TupleSections #-}
 module Cache where
 import Clash.Prelude
-import Control.Monad.State (execState)
-import Control.Lens
 import ICache.Types
 import ICache.Cache
-
-icacheT :: CacheState -> CacheInput -> (CacheState, CacheOutput)
-icacheT s i = f $ execState (icacheS i) emptyRunCacheState { _cacheState = s }
-  where f RunCacheState{..} = (_cacheState, _cacheOutput)
 
 {-# ANN topEntity
   (Synthesize

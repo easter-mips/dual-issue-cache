@@ -70,7 +70,8 @@ library
   hs-source-dirs: src
   other-modules: Utils.Debug
   exposed-modules: ICache.Types
-                  , ICache.Cache
+                 , ICache.Cache
+                 , ICache.Test
 
 test-suite icache-test
   hs-source-dirs: tests
@@ -85,7 +86,7 @@ test-suite icache-test
                , ghc-typelits-knownnat
 
                -- Tasty + Hedgedog for testing
-               , tasty 
+               , tasty
                , tasty-expected-failure
                , hedgehog
                , tasty-hedgehog

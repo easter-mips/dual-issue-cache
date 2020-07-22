@@ -13,12 +13,18 @@
 module ICache.Cache where
 import Clash.Prelude
 import Control.Lens
+import Control.Monad.State (execState)
 import ICache.Types
+-- import Utils.Debug -- trace functions
+
+icacheT :: CacheState -> CacheInput -> (CacheState, CacheOutput)
+icacheT s i = f $ execState (icacheS i) emptyRunCacheState { _cacheState = s }
+  where f RunCacheState{..} = (_cacheState, _cacheOutput)
 
 icacheS :: ICache
 icacheS = withResetn . withInstOutput $ \i -> do
-  current <- use cacheState
   handleRequest i
+  current <- use cacheState
   handleTrans current i
 
 withResetn :: ICache -> ICache
@@ -44,20 +50,20 @@ checkHit :: CacheInput -> ICacheM HitStatus
 checkHit i = f <$> hit0 <*> hit1
   where iaddr = i ^. instAddr
         itag = getAddrTag iaddr
-        iset = getAddrSet iaddr
+        is = getAddrSet iaddr
         ibank = getAddrBankId iaddr
         f False False = Miss
         f True _ | ibank == Bank7 = HitOneInst Way0 ibank
                  | otherwise = HitTwoInst Way0 ibank (succ ibank)
         f _ True | ibank == Bank7 = HitOneInst Way1 ibank
                  | otherwise = HitTwoInst Way1 ibank (succ ibank)
-        hit0 = checkTag Way0 iset itag
-        hit1 = checkTag Way1 iset itag
+        hit0 = checkTag Way0 is itag
+        hit1 = checkTag Way1 is itag
 
 checkTag :: WayId -> Set -> Tag -> ICacheM Bool
-checkTag way set t = (&&) <$> compareTag <*> isValid
-  where isValid = flip testBit (fromEnum set) . (^?! _Just) <$> preuse (cacheState . validFile . ix (wayIdx way))
-        getTag = (!! set) . (!! way) <$> use (cacheState . tagFile)
+checkTag way s t = (&&) <$> compareTag <*> isValid
+  where isValid = flip testBit (fromEnum s) . (^?! _Just) <$> preuse (cacheState . validFile . ix (wayIdx way))
+        getTag = (!! s) . (!! way) <$> use (cacheState . tagFile)
         compareTag = (== t) <$> getTag
 
 setBankAddr :: CacheInput -> ICacheM ()
@@ -81,7 +87,7 @@ getLRU s = f . flip testBit (fromEnum s) . (^?! _Just) <$> preuse (cacheState . 
         f False = Way0
 
 outputHitStatus :: CacheInput -> HitStatus -> ICacheM ()
-outputHitStatus i (HitOneInst wid bid) = setInstValid (True, False)
+outputHitStatus i (HitOneInst wid bid) = setInstValid (True, False) -- state change: LRU
                                       >> setBankAddr i
                                       >> cacheState . outputState .= ReadOneInst (wid, bid)
                                       >> updateLRU wid (getAddrSet $ i ^. instAddr)
@@ -89,7 +95,7 @@ outputHitStatus i (HitTwoInst wid bid1 bid2) = setInstValid (True, True)
                                             >> setBankAddr i
                                             >> cacheState . outputState .= ReadTwoInst (wid, bid1) (wid, bid2)
                                             >> updateLRU wid (getAddrSet $ i ^. instAddr)
-outputHitStatus i Miss = pure ()
+outputHitStatus _ Miss = pure ()
 
 -- If input addr requests a addr whose set is currently under operation
 -- of a transaction, stall the pipeline
@@ -170,6 +176,7 @@ getAxiAddrOfTrans tid Trans{..} | _transState == TransAddressing = let _axiRid =
 getAxiAddrOfTransInfo :: TransInfo -> Maybe AxiAddr
 getAxiAddrOfTransInfo TransInfo{..} | _priorTrans == Trans0 = a1 <|> a2
                                     | _priorTrans == Trans1 = a2 <|> a1
+                                    | otherwise = error "invalid prior trans" -- this should NEVER happen
   where a1 = getAxiAddrOfTrans Trans0 $ _trans !! Trans0
         a2 = getAxiAddrOfTrans Trans1 $ _trans !! Trans1
 
@@ -187,7 +194,8 @@ updateTransWithAxiAddrReady t@Trans{..} | _transState == TransAddressing = t & t
 
 handleAxiAddrReady :: Bool -> CacheState -> ICacheM ()
 handleAxiAddrReady False _ = pure ()
-handleAxiAddrReady True CacheState{..} = cacheState . transInfo . trans .= fmap updateTransWithAxiAddrReady (_transInfo ^. trans)
+handleAxiAddrReady True CacheState{..} = cacheState . transInfo . trans
+                                         .= fmap updateTransWithAxiAddrReady (_transInfo ^. trans)
 
 genAxiRReady :: TransInfo -> ICacheM ()
 genAxiRReady info = cacheOutput . rready .= (f Trans0 || f Trans1)
@@ -207,6 +215,7 @@ updateTransWithAxiData bid rcnt buf axiRData axiRLast = f rcnt axiRLast
   where f 7 True = over transState toRefill . g
         f _ _ = g
         toRefill (TransRead _ _ buf) = TransRefill buf
+        toRefill _ = error "ToRefill called on non-read state" -- this will NEVER happen
         g = transState .~ (TransRead (succBank bid) (rcnt + 1) $ buf & ix (bankIdx bid) .~ axiRData)
 
 handleAxiData :: CacheInput -> CacheState -> ICacheM ()
@@ -263,10 +272,11 @@ handleRequest i = use (cacheState . request) >>= f
         g _ BufMiss = pure () -- buffered request miss, do nothing
         g addr status | i ^. instAddr == addr = outputTransHitStatus status >> cacheState . request .= Nothing
                       | otherwise = cacheState . request .= Nothing -- clear request, do nothing
+                                                                    -- state change: requested
 
 handleInputRequest :: ICache
 handleInputRequest i = checkHitTrans (i ^. instAddr) <$> use (cacheState . transInfo) >>= f
-  where f BufMiss = withSetConflictCheck (withRefillingCheck runHitCheck) i
+  where f BufMiss = withSetConflictCheck (withRefillingCheck runHitCheck) i -- check hit bank
         f status = outputTransHitStatus status -- output inst
         runHitCheck i = checkHit i >>= g
         g Miss = handleInputMiss i -- input miss
@@ -292,7 +302,7 @@ withRefillingCheck m i = checkRefillConflict >>= f
 handleInputMiss :: ICache
 handleInputMiss i = getFreeTrans >>= f
   where f Nothing = pure ()
-        f (Just tid) = submitTrans tid (i ^. instAddr)
+        f (Just tid) = submitTrans tid (i ^. instAddr) -- state change: new trans
 
 submitTrans :: TransId -> Addr -> ICacheM ()
 submitTrans tid addr = f >>=
