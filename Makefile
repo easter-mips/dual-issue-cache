@@ -10,12 +10,15 @@ run: update
 build: update
 	nix-build default.nix
 
-.PHONY: gen clash
+.PHONY: gen clash deploy
 gen:
 	nix-shell ~/dev/hw/clash/clash-compiler-1.2.3/shell.nix --run "sh gen.sh"
 
 clash:
 	nix-shell ~/dev/hw/clash/clash-compiler-1.2.3/shell.nix
+
+deploy: gen
+	sh deploy.sh
 
 clean:
 	rm -rf cabal.*
