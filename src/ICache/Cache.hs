@@ -121,9 +121,10 @@ checkRefillConflict = (&&) <$> f Trans0 <*> f Trans1
         g _ = False
 
 hitTrans :: Addr -> TransId -> Trans -> TransHitStatus
-hitTrans addr tid Trans{..} | aset /= tset = BufMiss
+hitTrans addr tid Trans{..} | aset /= tset || atag /= ttag = BufMiss
                             | otherwise = f _transState
   where [aset, tset] = getAddrSet <$> [addr, _transAddr]
+        [atag, ttag] = getAddrTag <$> [addr, _transAddr]
         reqBid = getAddrBankId addr
         f (TransRead bid rcnt rbuf) | reqBid == Bank7 = BufMiss
                                     | otherwise = hitRead (initialBankId bid rcnt) rcnt rbuf
