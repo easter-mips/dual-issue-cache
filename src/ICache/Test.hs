@@ -47,17 +47,20 @@ testInputs = [ input { _instAddr = 100, _resetn = False } -- 0
              , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 13
              , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 14
              , input { _instAddr = 200, _rvalid = True, _rdata = 101, _rlast = False } -- 15
-             , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 16
-             , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 17
-             , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 18
+             , input { _instAddr = 208, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 16
+             , input { _instAddr = 208, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 17
+             , input { _instAddr = 208, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 18
              , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 19
              , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = False } -- 20
              , input { _instAddr = 200, _rid = 1, _rvalid = True, _rdata = 101, _rlast = True } -- 21
              , input { _instAddr = 200, _rid = 0, _rvalid = True, _rdata = 101, _rlast = True } -- 22
-             , input { _instAddr = 2000 } -- 23
+             , input { _instAddr = 204 } -- 23
+             , input { _instAddr = 100 } -- 24
+             , input { _instAddr = 104 } -- 25
              ]
 
 -- END TEST VARIABLES
 
--- >>> evalTestWith testInputs ^?! ix 23 . _2 . request
--- Just 0000_0000_0000_0000_0000_0111_1101_0000
+-- >>> evalTestWith testInputs ^?! ix 25 . _1
+
+-- >>> getAddrSet 104

@@ -230,12 +230,14 @@ handleAxiData CacheInput{..} cs | not _rvalid = pure ()
 
 data RefillData = RefillData { refillAddr :: Set
                              , refillData :: WayBankData
+                             , refillTag :: Tag
                              } deriving (Eq, Show, Generic, NFDataX)
 
 getRefillDataOfTrans :: Trans -> Maybe RefillData
 getRefillDataOfTrans t = g $ t ^. transState
   where g (TransRefill buf) = let refillAddr = tset
                                   refillData = buf
+                                  refillTag = getAddrTag $ t ^. transAddr
                               in Just RefillData{..}
         g _ = Nothing
         tset = getAddrSet $ t ^. transAddr
@@ -243,8 +245,17 @@ getRefillDataOfTrans t = g $ t ^. transState
 outputRefillData :: WayId -> RefillData -> ICacheM ()
 outputRefillData wid RefillData{..} = cacheOutput . bankAddrOutput .= refillAddr
                                    >> cacheOutput . bankDataOutput .= refillData
-                                   >> cacheOutput . bankWriteEnableOutput . ix (wayIdx wid) .= ($$(bLit "11111111") :: BitVector 8)
+                                   >> cacheOutput . bankWriteEnableOutput . ix (wayIdx wid)
+                                      .= ($$(bLit "11111111") :: BitVector 8)
                                    >> updateLRU wid refillAddr
+                                   >> updateValid wid refillAddr
+                                   >> updateTag wid refillAddr refillTag
+
+updateValid :: WayId -> Set -> ICacheM ()
+updateValid w s = cacheState . validFile . ix (wayIdx w) %= flip setBit (fromEnum s)
+
+updateTag :: WayId -> Set -> Tag -> ICacheM ()
+updateTag w s t = cacheState . tagFile . ix (wayIdx w) %= replace s t
 
 resetTrans :: TransId -> ICacheM ()
 resetTrans tid = cacheState . transInfo . trans . ix (transIdx tid) .= emptyTrans
@@ -274,7 +285,6 @@ handleRequest i = use (cacheState . request) >>= f
         g addr status | i ^. instAddr == addr = outputTransHitStatus status >> cacheState . request .= Nothing
                       | otherwise = cacheState . request .= Nothing -- clear request, do nothing
                                                                     -- state change: requested
-
 handleInputRequest :: ICache
 handleInputRequest i = checkHitTrans (i ^. instAddr) <$> use (cacheState . transInfo) >>= f
   where f BufMiss = withSetConflictCheck (withRefillingCheck runHitCheck) i -- check hit bank
