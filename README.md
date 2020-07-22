@@ -1,2 +1,2 @@
-# dual-issue-icache
- A dual-issue MISP instruction cache written in Clash.
+# Dual Issue I-Cache
+ A dual-issue MIPS I-cache written in Clash.
