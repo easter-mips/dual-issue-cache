@@ -133,7 +133,7 @@ hitTrans addr tid Trans{..} | aset /= tset || atag /= ttag = BufMiss
         hitFill readBuf | reqBid == Bank7 = BufHitOneInst $ readBuf !! fromEnum reqBid
                         | otherwise = BufHitTwoInst (readBuf !! fromEnum reqBid) $ readBuf ^?! ix (bankIdx (succ reqBid))
         hitRead initialBid readCount readBuf | readCount <= reqReadCount = BufMiss
-                                             | readCount - 1 == reqReadCount = BufMiss -- Do not return until two insts can be fetched
+                                             | readCount - 1 == reqReadCount = BufHitOneInst $ readBuf !! reqBid
                                              | otherwise = BufHitTwoInst (readBuf ^?! ix (bankIdx reqBid)) $ readBuf ^?! ix (bankIdx (succ reqBid))
          where reqReadCount = readCountBetween initialBid reqBid
 
