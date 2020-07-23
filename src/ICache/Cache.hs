@@ -281,7 +281,7 @@ handleRequest :: ICache
 handleRequest i = use (cacheState . request) >>= f
   where f Nothing = withAlignCheck handleInputRequest i -- handle input
         f (Just addr) = checkHitTrans addr <$> use (cacheState . transInfo) >>= g addr
-        g _ BufMiss = pure () -- buffered request miss, do nothing
+        g _ BufMiss = pure () >> outputStallReason normalMiss -- buffered request miss, do nothing
         g addr status | i ^. instAddr == addr = outputTransHitStatus status >> cacheState . request .= Nothing
                       | otherwise = cacheState . request .= Nothing -- clear request, do nothing
                                                                     -- state change: requested
@@ -302,18 +302,21 @@ withAlignCheck m i = g $ f (i ^. instAddr)
 
 withSetConflictCheck :: ICache -> ICache
 withSetConflictCheck m i = checkSetConflict i >>= f
-  where f True = pure ()
+  where f True = pure () >> outputStallReason setConflict
         f False = m i
 
 withRefillingCheck :: ICache -> ICache
 withRefillingCheck m i = checkRefillConflict >>= f
-  where f True = pure ()
+  where f True = pure () >> outputStallReason refillConflict
         f False = m i
 
 handleInputMiss :: ICache
 handleInputMiss i = getFreeTrans >>= f
-  where f Nothing = pure ()
-        f (Just tid) = submitTrans tid (i ^. instAddr) -- state change: new trans
+  where f Nothing = pure () >> outputStallReason missWithNoFreeTrans
+        f (Just tid) = submitTrans tid (i ^. instAddr) >> outputStallReason normalMiss -- state change: new trans
+
+outputStallReason :: StallReason -> ICacheM ()
+outputStallReason = (cacheOutput . stallReason .=)
 
 submitTrans :: TransId -> Addr -> ICacheM ()
 submitTrans tid addr = f >>=

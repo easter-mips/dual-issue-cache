@@ -69,6 +69,7 @@ data CacheOutput = CacheOutput { _inst1 :: Inst
                                , _inst2 :: Inst
                                , _inst1Valid :: Bool
                                , _inst2Valid :: Bool
+                               , _stallReason :: StallReason
 
                                -- Read address channel outputs
                                , _arid :: BitVector 4
@@ -84,12 +85,21 @@ data CacheOutput = CacheOutput { _inst1 :: Inst
                                , _bankWriteEnableOutput :: BankWriteEnableOutput
                                } deriving (Eq, Show, Generic, NFDataX)
 
+type StallReason = Unsigned 3
+noStall, missWithNoFreeTrans, normalMiss, refillConflict, setConflict :: StallReason
+noStall = 0
+missWithNoFreeTrans = 1
+normalMiss = 2
+refillConflict = 3
+setConflict = 4
+
 emptyCacheOutput :: CacheOutput
 emptyCacheOutput = CacheOutput{..}
   where _inst1 = 0
         _inst2 = 0
         _inst1Valid = False
         _inst2Valid = False
+        _stallReason = noStall
         _arid = 0
         _araddr = 0
         _arvalid = False
@@ -132,7 +142,7 @@ emptyTrans = Trans{..}
         _transState = TransAvailable
         _transBuf = replicate d8 0
         _fillWay = Way0
-        
+
 
 data TransId = Trans0 | Trans1
              deriving (Eq, Show, Enum, Generic, NFDataX)
