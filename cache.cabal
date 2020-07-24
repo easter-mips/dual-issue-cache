@@ -1,5 +1,5 @@
 cabal-version: 2.4
-name: icache
+name: cache
 version: 1.0.0
 license: BSD-3-Clause
 build-type: Simple
@@ -72,6 +72,9 @@ library
   exposed-modules: ICache.Types
                  , ICache.Cache
                  , ICache.Test
+                 , DCacheAgent.Agent
+                 , DCacheAgent.Types
+                 , DCacheAgent.Logic
 
 test-suite icache-test
   hs-source-dirs: tests
@@ -79,8 +82,7 @@ test-suite icache-test
   ghc-options: -threaded
   main-is: Main.hs
   other-modules:
-  build-depends: icache
-               , base < 5
+  build-depends: base < 5
                , ghc-typelits-natnormalise
                , ghc-typelits-extra
                , ghc-typelits-knownnat
@@ -90,4 +92,5 @@ test-suite icache-test
                , tasty-expected-failure
                , hedgehog
                , tasty-hedgehog
+               , cache
   default-language: Haskell2010

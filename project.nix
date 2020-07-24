@@ -3,7 +3,7 @@
 , mtl, stdenv, tasty, tasty-expected-failure, tasty-hedgehog
 }:
 mkDerivation {
-  pname = "icache";
+  pname = "cache";
   version = "1.0.0";
   src = ./.;
   libraryHaskellDepends = [
