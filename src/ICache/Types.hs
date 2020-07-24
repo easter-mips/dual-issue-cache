@@ -133,10 +133,12 @@ data TransInfo = TransInfo { _priorTrans :: TransId
                            , _trans :: Vec 2 Trans
                            } deriving (Eq, Show, Generic, NFDataX)
 
+emptyTransInfo :: TransInfo
 emptyTransInfo = TransInfo{..}
   where _priorTrans = Trans0
         _trans = replicate d2 emptyTrans
 
+emptyTrans :: Trans
 emptyTrans = Trans{..}
   where _transAddr = 0
         _transState = TransAvailable
@@ -159,6 +161,7 @@ getRidOfTransId Trans1 = $$(bLit "0001")
 getTransIdOfRid :: BitVector 4 -> TransId
 getTransIdOfRid $(bitPattern "0000") = Trans0
 getTransIdOfRid $(bitPattern "0001") = Trans1
+getTransIdOfRid _ = undefined
 
 data TransState = TransAvailable
                 | TransAddressing

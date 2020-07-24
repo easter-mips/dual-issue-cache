@@ -33,6 +33,7 @@ import ICache.Cache
                                 , PortName "inst_2_o"
                                 , PortName "inst_1_valid"
                                 , PortName "inst_2_valid"
+                                , PortName "stall_reason_o"
                                 , PortName "axi_arid_o"
                                 , PortName "axi_araddr_o"
                                 , PortName "axi_arvalid_o"
