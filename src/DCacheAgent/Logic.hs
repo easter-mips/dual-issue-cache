@@ -18,7 +18,7 @@ genReadData AgentInput{..} _ = dcReadData
 genWait :: AgentInput -> AgentState -> Bool
 genWait AgentInput{..} (CacheBusy _) = memEnable
 genWait AgentInput{..} CacheFree = f $ needsGuard memEnable memWriteEnable dcWait
-  where f True = True
+  where f True = False
         f False = dcWait
 
 genMemReq :: AgentInput -> AgentState -> (Addr, Bool, Bool, MemSize, MemStrb, Data)
